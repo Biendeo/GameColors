@@ -1,26 +1,23 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Timers;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
+using Timer = System.Timers.Timer;
 
 namespace GameColors
 {
     public class TweakMain : MonoBehaviour
     {
-        private bool configExists()
-        {
-            return File.Exists(this.configLoc);
-        }
 
         private bool isStarPower
         {
@@ -28,11 +25,6 @@ namespace GameColors
             {
                 return this.sideLGlow.color.a > 0;
             }
-        }
-
-        private void OnStarPower()
-        {
-            bool flag = this.spRan;
         }
 
         private Type GetNoteField()
@@ -68,71 +60,66 @@ namespace GameColors
             this.noteType = this.GetNoteField();
             if (this.noteType != null)
             {
-                this.noteColorField = this.FindField(this.noteColorSig, "Notes");
-                this.animColorField = this.FindField(this.animColorsSig, "Note Anims");
-                this.sustainColorField = this.FindField(this.sustainColorSig, "Sustain");
-                this.cyanColorField = this.FindField(this.cyanColorSig, "Cyan");
-                this.cyanAnimField = this.FindField(this.cyanAnimSig, "Cyan Anim");
-                this.purpleColorField = this.FindField(this.purpleColorSig, "Purple Color");
-                this.openSustainField = this.FindField(this.openSustainSig, "Open Sustain");
+                TweakMain.noteColorField = this.FindField(this.noteColorSig, "Notes");
+                TweakMain.animColorField = this.FindField(this.animColorsSig, "Note Anims");
+                TweakMain.sustainColorField = this.FindField(this.sustainColorSig, "Sustain");
+                TweakMain.cyanColorField = this.FindField(this.cyanColorSig, "Cyan");
+                TweakMain.cyanAnimField = this.FindField(this.cyanAnimSig, "Cyan Anim");
+                TweakMain.purpleColorField = this.FindField(this.purpleColorSig, "Purple Color");
+                TweakMain.openSustainField = this.FindField(this.openSustainSig, "Open Sustain");
                 return;
             }
             Debug.Log("Fatal Error: Note field is null!");
         }
 
-        private void SetOpenNotesColor(Color color)
+        private static void SetOpenNotesColor(Color color)
         {
             //Color color2 = (Color)this.openSustainField.GetValue(null);
-            this.openSustainField.SetValue(null, color);
+            TweakMain.openSustainField.SetValue(null, color);
 
             //Color color3 = (Color)this.purpleColorField.GetValue(null);
-            this.purpleColorField.SetValue(null, color);
+            TweakMain.purpleColorField.SetValue(null, color);
         }
 
-        private void SetStarPowerNotes(Color color)
+        private static void SetStarPowerNotes(Color color)
         {
-            this.cyanColorField.SetValue(null, color);
-            this.cyanAnimField.SetValue(null, color);
+            TweakMain.cyanColorField.SetValue(null, color);
+            TweakMain.cyanAnimField.SetValue(null, color);
         }
 
-        private void SetNoteColor(int index, Color color)
+        private static void SetNoteColor(int index, Color color)
         {
             if (index <= 5)
             {
-                Color[] array = this.noteColorField.GetValue(null) as Color[];
+                Color[] array = TweakMain.noteColorField.GetValue(null) as Color[];
                 array[index] = color;
-                this.noteColorField.SetValue(null, array);
+                TweakMain.noteColorField.SetValue(null, array);
 
                 if (index < 5)
                 {
-                    Color[] array2 = this.animColorField.GetValue(null) as Color[];
+                    Color[] array2 = TweakMain.animColorField.GetValue(null) as Color[];
                     array2[index] = color;
-                    this.animColorField.SetValue(null, array2);
+                    TweakMain.animColorField.SetValue(null, array2);
                 }
             }
         }
 
-        private void SetSustainColor(int index, Color color)
+        private static void SetSustainColor(int index, Color color)
         {
             if (index <= 4)
             {
-                Color[] array = this.sustainColorField.GetValue(null) as Color[];
+                Color[] array = TweakMain.sustainColorField.GetValue(null) as Color[];
                 array[index] = color;
-                this.sustainColorField.SetValue(null, array);
+                TweakMain.sustainColorField.SetValue(null, array);
             }
         }
 
-        private Sprite CreateSpriteFromTex(string filePath)
+        public static void setColours(Color[] cols)
         {
-            Texture2D texture2D = new Texture2D(2, 2);
-            byte[] array = File.ReadAllBytes(filePath);
-
-            if (ImageConversion.LoadImage(texture2D, array))
-            {
-                return Sprite.Create(texture2D, new Rect(0, 0, texture2D.width, texture2D.height), new Vector2(0, 0), 100);
-            }
-
-            return null;
+            TweakMain.noteColorField.SetValue(null, cols);
+            TweakMain.animColorField.SetValue(null, cols);
+            TweakMain.sustainColorField.SetValue(null, cols);
+            TweakMain.openSustainField.SetValue(null, cols);
         }
 
         private Texture2D TexFromFile(string texPath)
@@ -169,7 +156,7 @@ namespace GameColors
                 string[] array = File.ReadAllLines(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/" + pName);
                 if (array[34] != "empty")
                 {
-                    this.bgSprite = this.CreateSpriteFromTex(array[34]);
+                    this.bgSprite = Helpers.CreateSpriteFromTex(array[34], Vector2.zero);
                     this.currBgFile = array[34];
                     this.bgSaveProfile = true;
                     this.bgPersist = true;
@@ -191,7 +178,10 @@ namespace GameColors
 
         private void LoadConfig(string pName)
         {
+            Debug.Log("Loading profile: " + pName);
             string[] array = File.ReadAllLines(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/" + pName);
+            
+            this.LoadDefaultValues();
             this.LoadBG(pName);
 
             for (int i = 0; i < array.Length; i++)
@@ -269,7 +259,7 @@ namespace GameColors
 
                     for (int j = 0; j < array2.Length; j++)
                     {
-                        array3[j] = float.Parse(array2[j]);
+                        array3[j] = float.Parse(array2[j], NumberFormatInfo.InvariantInfo);
                     }
 
                     switch (i)
@@ -684,10 +674,13 @@ namespace GameColors
                     }
                 }
             }
+
+            Debug.Log("Loading complete!");
         }
 
         private void SaveConfig(string fileName)
         {
+            Debug.Log("Saving config: " + fileName);
             using (StreamWriter streamWriter = new StreamWriter(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/" + fileName + ".cfg"))
             {
                 if (!this.greenRB && this.greenActive)
@@ -1842,11 +1835,16 @@ namespace GameColors
                     streamWriter2.WriteLine("empty");
                 }
             }
+
+            Debug.Log("Save complete!");
         }
 
         private void Start()
         {
             Debug.Delete();
+
+            this.resetGap();
+            this.rainbowTimer = new Timer(20.0);
 
             UnityEngine.Object.DontDestroyOnLoad(this);
             new DirectoryInfo(Environment.CurrentDirectory + "/Tweaks/Config/").Create();
@@ -1939,7 +1937,8 @@ namespace GameColors
             this.clearScreen = Helpers.MakeTex(2, 2, Helpers.RGBtoUnity(0, 0, 0, 0));
 
             KeyBindConfig.LoadFromConfig();
-            new Thread(new ThreadStart(this.RainbowThread)).Start();
+            this.rainbowTimer.Elapsed += this.RainbowThread;
+            //new Thread(new ThreadStart(this.RainbowThread)).Start();
 
             /*Debug.Log("Object list:");
             foreach (UnityEngine.Object obj in GameObject.FindObjectsOfType(typeof(UnityEngine.Object)))
@@ -1988,21 +1987,41 @@ namespace GameColors
             }
         }
 
-        private void RainbowThread()
+        private void resetGap()
         {
-            for (; ; )
+            TweakMain.rainbowIndex = new int[]
             {
-                if (GameStatus.gameState == GameStatus.GameState.PlayingSong)
+                0,
+                TweakMain.rainbowGap,
+                TweakMain.rainbowGap * 2,
+                TweakMain.rainbowGap * 3,
+                TweakMain.rainbowGap * 4
+            };
+        }
+
+        private void RainbowThread(object sender, ElapsedEventArgs e)
+        {
+            for (int i = 0; i < TweakMain.rainbowIndex.Length; i++)
+            {
+                TweakMain.rainbowIndex[i] += TweakMain.rainbowSpeed;
+
+                if (TweakMain.rainbowIndex[i] >= GameObjects.allColours.Count)
                 {
-                    Color color = Helpers.RGBtoUnity(255, 25, 25, 255);
-                    Color color2 = Helpers.RGBtoUnity(255, 162, 0, 255);
-                    Color color3 = Helpers.RGBtoUnity(246, 255, 0, 255);
-                    Color color4 = Helpers.RGBtoUnity(19, 240, 7, 255);
-                    Color color5 = Helpers.RGBtoUnity(0, 195, 255, 255);
-                    Color color6 = Helpers.RGBtoUnity(102, 0, 255, 255);
-                    Color color7 = Helpers.RGBtoUnity(242, 0, 255, 255);
-                    Color[] array = new Color[]
-                    {
+                    TweakMain.rainbowIndex[i] -= GameObjects.allColours.Count;
+                }
+            }
+
+            if (GameStatus.gameState == GameStatus.GameState.PlayingSong)
+            {
+                Color color = Helpers.RGBtoUnity(255, 25, 25, 255);
+                Color color2 = Helpers.RGBtoUnity(255, 162, 0, 255);
+                Color color3 = Helpers.RGBtoUnity(246, 255, 0, 255);
+                Color color4 = Helpers.RGBtoUnity(19, 240, 7, 255);
+                Color color5 = Helpers.RGBtoUnity(0, 195, 255, 255);
+                Color color6 = Helpers.RGBtoUnity(102, 0, 255, 255);
+                Color color7 = Helpers.RGBtoUnity(242, 0, 255, 255);
+                Color[] array = new Color[]
+                {
                         color,
                         color2,
                         color3,
@@ -2010,123 +2029,390 @@ namespace GameColors
                         color5,
                         color6,
                         color7
-                    };
+                };
 
-                    if (this.greenRB)
-                    {
-                        Color color8 = array[Random.Range(0, 6)];
-                        this.SetNoteColor(0, color8);
-                        this.SetSustainColor(0, color8);
-                        this.greenActive = false;
-                    }
-
-                    if (this.redRB)
-                    {
-                        Color color9 = array[Random.Range(0, 6)];
-                        this.SetNoteColor(1, color9);
-                        this.SetSustainColor(1, color9);
-                        this.redActive = false;
-                    }
-
-                    if (this.yellowRB)
-                    {
-                        Color color10 = array[Random.Range(0, 6)];
-                        this.SetNoteColor(2, color10);
-                        this.SetSustainColor(2, color10);
-                        this.yellowActive = false;
-                    }
-
-                    if (this.blueRB)
-                    {
-                        Color color11 = array[Random.Range(0, 6)];
-                        this.SetNoteColor(3, color11);
-                        this.SetSustainColor(3, color11);
-                        this.blueActive = false;
-                    }
-
-                    if (this.orangeRB)
-                    {
-                        Color color12 = array[Random.Range(0, 6)];
-                        this.SetNoteColor(4, color12);
-                        this.SetSustainColor(4, color12);
-                        this.orangeActive = false;
-                    }
-
-                    if (this.spRB)
-                    {
-                        Color starPowerNotes = array[Random.Range(0, 6)];
-                        this.SetStarPowerNotes(starPowerNotes);
-                        this.spActive = false;
-                    }
+                if (this.greenRB)
+                {
+                    Color color8 = array[Random.Range(0, 6)];
+                    TweakMain.SetNoteColor(0, color8);
+                    TweakMain.SetSustainColor(0, color8);
+                    this.greenActive = false;
                 }
-                Thread.Sleep(65);
+
+                if (this.redRB)
+                {
+                    Color color9 = array[Random.Range(0, 6)];
+                    TweakMain.SetNoteColor(1, color9);
+                    TweakMain.SetSustainColor(1, color9);
+                    this.redActive = false;
+                }
+
+                if (this.yellowRB)
+                {
+                    Color color10 = array[Random.Range(0, 6)];
+                    TweakMain.SetNoteColor(2, color10);
+                    TweakMain.SetSustainColor(2, color10);
+                    this.yellowActive = false;
+                }
+
+                if (this.blueRB)
+                {
+                    Color color11 = array[Random.Range(0, 6)];
+                    TweakMain.SetNoteColor(3, color11);
+                    TweakMain.SetSustainColor(3, color11);
+                    this.blueActive = false;
+                }
+
+                if (this.orangeRB)
+                {
+                    Color color12 = array[Random.Range(0, 6)];
+                    TweakMain.SetNoteColor(4, color12);
+                    TweakMain.SetSustainColor(4, color12);
+                    this.orangeActive = false;
+                }
+
+                if (this.spRB)
+                {
+                    Color starPowerNotes = array[Random.Range(0, 6)];
+                    TweakMain.SetStarPowerNotes(starPowerNotes);
+                    this.spActive = false;
+                }
             }
         }
 
         private void LoadDefaultValues()
         {
-            if (!this.particleSettingsActive)
+            if (GameStatus.gameState == GameStatus.GameState.PlayingSong)
             {
-                ParticleSystem.MainModule main = this.particles[10].main;
-                this.particleSize = main.startSize.constant;
-                this.particleSpeed = main.startSpeed.constant;
-                this.particleGravity = main.gravityModifier.constant;
-                this.particleMax = main.maxParticles;
-            }
+                try
+                {
+                    if (!this.particleSettingsActive)
+                    {
+                        foreach (ParticleSystem particleSystem in this.particles)
+                        {
+                            ParticleSystem.MainModule main = particleSystem.main;
+                            main.startSize = 0.05f;
+                            main.startSpeed = 0.7f;
+                            main.gravityModifier = 0.17f;
+                            main.maxParticles = 1000;
+                        }
+                    }
 
-            if (!this.pgActive)
-            {
-                ParticleSystem.MainModule main = this.particles[14].main;
-                this.particleGR = main.startColor.color.r;
-                this.particleGG = main.startColor.color.g;
-                this.particleGB = main.startColor.color.b;
-                this.particleGA = main.startColor.color.a;
-            }
+                    if (!this.pgActive)
+                    {
+                        ParticleSystem.MainModule main14 = this.particles[14].main;
+                        ParticleSystem.MainModule main9 = this.particles[9].main;
+                        main14.startColor = new Color(1f, 0.315f, 0f);
+                        main9.startColor = new Color(1f, 0.315f, 0f);
+                    }
 
-            if (!this.prActive)
-            {
-                ParticleSystem.MainModule main = this.particles[13].main;
-                this.particleRR = main.startColor.color.r;
-                this.particleRG = main.startColor.color.g;
-                this.particleRB = main.startColor.color.b;
-                this.particleRA = main.startColor.color.a;
-            }
+                    if (!this.prActive)
+                    {
+                        ParticleSystem.MainModule main13 = this.particles[13].main;
+                        ParticleSystem.MainModule main8 = this.particles[8].main;
+                        main13.startColor = new Color(1f, 0.315f, 0f);
+                        main13.startColor = new Color(1f, 0.315f, 0f);
+                    }
 
-            if (!this.pyActive)
-            {
-                ParticleSystem.MainModule main = this.particles[12].main;
-                this.particleYR = main.startColor.color.r;
-                this.particleYG = main.startColor.color.g;
-                this.particleYB = main.startColor.color.b;
-                this.particleYA = main.startColor.color.a;
-            }
+                    if (!this.pyActive)
+                    {
+                        ParticleSystem.MainModule main12 = this.particles[12].main;
+                        ParticleSystem.MainModule main7 = this.particles[7].main;
+                        main12.startColor = new Color(1f, 0.315f, 0f);
+                        main7.startColor = new Color(1f, 0.315f, 0f);
+                    }
 
-            if (!this.pbActive)
-            {
-                ParticleSystem.MainModule main = this.particles[11].main;
-                this.particleBR = main.startColor.color.r;
-                this.particleBG = main.startColor.color.g;
-                this.particleBB = main.startColor.color.b;
-                this.particleBA = main.startColor.color.a;
-            }
+                    if (!this.pbActive)
+                    {
+                        ParticleSystem.MainModule main11 = this.particles[11].main;
+                        ParticleSystem.MainModule main6 = this.particles[6].main;
+                        main11.startColor = new Color(1f, 0.315f, 0f);
+                        main6.startColor = new Color(1f, 0.315f, 0f);
+                    }
 
-            if (!this.poActive)
-            {
-                ParticleSystem.MainModule main = this.particles[14].main;
-                this.particleOR = main.startColor.color.r;
-                this.particleOG = main.startColor.color.g;
-                this.particleOB = main.startColor.color.b;
-                this.particleOA = main.startColor.color.a;
+                    if (!this.poActive)
+                    {
+                        ParticleSystem.MainModule main10 = this.particles[10].main;
+                        ParticleSystem.MainModule main5 = this.particles[5].main;
+                        main10.startColor = new Color(1f, 0.315f, 0f);
+                        main5.startColor = new Color(1f, 0.315f, 0f);
+                    }
+                }
+                catch
+                {
+                    Debug.Log("Error loading default particle values");
+                }
+
+                try
+                {
+                    if (!this.greenActive)
+                    {
+                        TweakMain.SetNoteColor(0, Color.green);
+                        TweakMain.SetSustainColor(0, Color.green);
+                    }
+
+                    if (!this.redActive)
+                    {
+                        TweakMain.SetNoteColor(1, Color.red);
+                        TweakMain.SetSustainColor(1, Color.red);
+                    }
+
+                    if (!this.yellowActive)
+                    {
+                        TweakMain.SetNoteColor(2, new Color(1f, 1f, 0f));
+                        TweakMain.SetSustainColor(2, new Color(1f, 1f, 0f));
+                    }
+
+                    if (!this.blueActive)
+                    {
+                        TweakMain.SetNoteColor(3, new Color(0f, 0.541f, 1f));
+                        TweakMain.SetSustainColor(3, new Color(0f, 0.776f, 1f));
+                    }
+
+                    if (!this.orangeActive)
+                    {
+                        TweakMain.SetNoteColor(4, new Color(1f, 0.702f, 0f));
+                        TweakMain.SetSustainColor(4, new Color(1f, 0.827f, 0.235f));
+                    }
+
+                    if (!this.onActive)
+                    {
+                        TweakMain.SetOpenNotesColor(new Color(0.733f, 0f, 1f));
+                    }
+
+                    if (!this.spActive)
+                    {
+                        TweakMain.SetStarPowerNotes(Color.cyan);
+                    }
+                }
+                catch
+                {
+                    Debug.Log("Error loading default note colours");
+                }
+
+                try
+                {
+                    if (!this.spblActive)
+                    {
+                        this.spBars[0].color = Color.cyan;
+                    }
+
+                    if (!this.spbuActive)
+                    {
+                        this.spBars[1].color = Color.cyan;
+                    }
+
+                    if (!this.spbLtActive)
+                    {
+                        this.spBars[2].color = Color.cyan;
+                    }
+                }
+                catch
+                {
+                    Debug.Log("Error loading default SP bar colours");
+                }
+
+                try
+                {
+                    if (!this.isActive)
+                    {
+                        this.innerStar.color = Color.white;
+                    }
+
+                    if (!this.osActive)
+                    {
+                        this.outerStar.color = Color.white;
+                    }
+
+                    if (!this.songpbActive)
+                    {
+                        this.pBar1.color = new Color(0.482f, 0.537f, 0.824f);
+                    }
+
+                    if (!this.starpbActive)
+                    {
+                        pBar2.color = new Color(0.776f, 0.603f, 0.302f);
+                    }
+
+                    if (!this.scTextActive)
+                    {
+                        starCount.color = new Color(0.831f, 0.531f, 0f);
+                    }
+
+                    if (!this.scoreFontActive)
+                    {
+                        foreach (SpriteRenderer font in this.scoreFonts)
+                        {
+                            font.color = new Color(0.866f, 0.866f, 0.866f);
+                        }
+                    }
+
+                    if (!this.comboFontActive)
+                    {
+                        foreach (SpriteRenderer font in this.comboFonts)
+                        {
+                            font.color = new Color(0.831f, 0.531f, 0f);
+                        }
+                    }
+                }
+                catch
+                {
+                    Debug.Log("Error loading default UI colours");
+                }
+
+                try
+                {
+                    FretHead greenH = this.fretHeads[0];
+                    FretHead redH = this.fretHeads[1];
+                    FretHead yellowH = this.fretHeads[2];
+                    FretHead blueH = this.fretHeads[3];
+                    FretHead orangeH = this.fretHeads[4];
+
+                    if (!this.ghActive)
+                    {
+                        greenH.headRenderer.color = Color.white;
+                    }
+
+                    if (!this.rhActive)
+                    {
+                        redH.headRenderer.color = Color.white;
+                    }
+
+                    if (!this.yhActive)
+                    {
+                        yellowH.headRenderer.color = Color.white;
+                    }
+
+                    if (!this.bhActive)
+                    {
+                        blueH.headRenderer.color = Color.white;
+                    }
+
+                    if (!this.ohActive)
+                    {
+                        orangeH.headRenderer.color = Color.white;
+                    }
+
+                    if (!this.ghlActive)
+                    {
+                        greenH.headLightRenderer.color = Color.green;
+                    }
+
+                    if (!this.rhlActive)
+                    {
+                        redH.headLightRenderer.color = Color.red;
+                    }
+
+                    if (!this.yhlActive)
+                    {
+                        yellowH.headLightRenderer.color = new Color(1f, 1f, 0.345f);
+                    }
+
+                    if (!this.bhlActive)
+                    {
+                        blueH.headLightRenderer.color = new Color(0.47f, 0.823f, 1f);
+                    }
+
+                    if (!this.ohlActive)
+                    {
+                        orangeH.headLightRenderer.color = new Color(1f, 0.749f, 0.16f);
+                    }
+
+                    FretCover greenC = this.fretCovers[0];
+                    FretCover redC = this.fretCovers[1];
+                    FretCover yellowC = this.fretCovers[2];
+                    FretCover blueC = this.fretCovers[3];
+                    FretCover orangeC = this.fretCovers[4];
+
+                    if (!this.gcActive)
+                    {
+                        greenC.backCoverRenderer.color = Color.green;
+                        greenC.frontCoverRenderer.color = Color.green;
+                        greenC.headCoverRenderer.color = Color.green;
+                    }
+
+                    if (!this.rcActive)
+                    {
+                        redC.backCoverRenderer.color = Color.red;
+                        redC.frontCoverRenderer.color = Color.red;
+                        redC.headCoverRenderer.color = Color.red;
+                    }
+
+                    if (!this.ycActive)
+                    {
+                        yellowC.backCoverRenderer.color = new Color(1f, 1f, 0.345f);
+                        yellowC.frontCoverRenderer.color = new Color(1f, 1f, 0.345f);
+                        yellowC.headCoverRenderer.color = new Color(1f, 1f, 0.345f);
+                    }
+
+                    if (!this.bcActive)
+                    {
+                        blueC.backCoverRenderer.color = new Color(0.47f, 0.823f, 1f);
+                        blueC.frontCoverRenderer.color = new Color(0.47f, 0.823f, 1f);
+                        blueC.headCoverRenderer.color = new Color(0.47f, 0.823f, 1f);
+                    }
+
+                    if (!this.ocActive)
+                    {
+                        orangeC.backCoverRenderer.color = new Color(1f, 0.749f, 0.16f);
+                        orangeC.frontCoverRenderer.color = new Color(1f, 0.749f, 0.16f);
+                        orangeC.headCoverRenderer.color = new Color(1f, 0.749f, 0.16f);
+                    }
+                }
+                catch
+                {
+                    Debug.Log("Error loading default fret colours");
+                }
+
+                try
+                {
+                    if (!this.strikeGActive)
+                    {
+                        strikeStrings[0].color = Color.gray;
+                    }
+
+                    if (!this.strikeRActive)
+                    {
+                        strikeStrings[1].color = Color.gray;
+                    }
+
+                    if (!this.strikeYActive)
+                    {
+                        strikeStrings[2].color = Color.gray;
+                    }
+
+                    if (!this.strikeBActive)
+                    {
+                        strikeStrings[3].color = Color.gray;
+                    }
+
+                    if (!this.strikeOActive)
+                    {
+                        strikeStrings[4].color = Color.gray;
+                    }
+
+                    if (!this.sActive)
+                    {
+                        this.sideL.color = Color.white;
+                        this.sideR.color = Color.white;
+                    }
+                }
+                catch
+                {
+                    Debug.Log("Error loading default highway colours");
+                }
             }
         }
 
         private void LoadNotes()
         {
+            this.LoadDefaultValues();
+
             try
             {
                 if (this.spActive)
                 {
-                    this.SetStarPowerNotes(this.spPrint);
+                    TweakMain.SetStarPowerNotes(this.spPrint);
                 }
             }
             catch (Exception ex)
@@ -2138,8 +2424,8 @@ namespace GameColors
             {
                 if (this.greenActive)
                 {
-                    this.SetNoteColor(0, this.greenPrint);
-                    this.SetSustainColor(0, this.greenPrint);
+                    TweakMain.SetNoteColor(0, this.greenPrint);
+                    TweakMain.SetSustainColor(0, this.greenPrint);
                     this.greenRB = false;
                 }
             }
@@ -2152,8 +2438,8 @@ namespace GameColors
             {
                 if (this.redActive)
                 {
-                    this.SetNoteColor(1, this.redPrint);
-                    this.SetSustainColor(1, this.redPrint);
+                    TweakMain.SetNoteColor(1, this.redPrint);
+                    TweakMain.SetSustainColor(1, this.redPrint);
                     this.redRB = false;
                 }
             }
@@ -2166,8 +2452,8 @@ namespace GameColors
             {
                 if (this.yellowActive)
                 {
-                    this.SetNoteColor(2, this.yellowPrint);
-                    this.SetSustainColor(2, this.yellowPrint);
+                    TweakMain.SetNoteColor(2, this.yellowPrint);
+                    TweakMain.SetSustainColor(2, this.yellowPrint);
                     this.yellowRB = false;
                 }
             }
@@ -2180,8 +2466,8 @@ namespace GameColors
             {
                 if (this.blueActive)
                 {
-                    this.SetNoteColor(3, this.bluePrint);
-                    this.SetSustainColor(3, this.bluePrint);
+                    TweakMain.SetNoteColor(3, this.bluePrint);
+                    TweakMain.SetSustainColor(3, this.bluePrint);
                     this.blueRB = false;
                 }
             }
@@ -2194,8 +2480,8 @@ namespace GameColors
             {
                 if (this.orangeActive)
                 {
-                    this.SetNoteColor(4, this.orangePrint);
-                    this.SetSustainColor(4, this.orangePrint);
+                    TweakMain.SetNoteColor(4, this.orangePrint);
+                    TweakMain.SetSustainColor(4, this.orangePrint);
                     this.orangeRB = false;
                 }
             }
@@ -2208,7 +2494,7 @@ namespace GameColors
             {
                 if (this.onActive)
                 {
-                    this.SetOpenNotesColor(this.onPrint);
+                    TweakMain.SetOpenNotesColor(this.onPrint);
                 }
             }
             catch (Exception ex)
@@ -5445,7 +5731,7 @@ namespace GameColors
                                         if (GUILayout.Button("Apply " + Path.GetFileName(text), new GUILayoutOption[0]))
                                         {
                                             this.currBgFile = text;
-                                            this.bgSprite = this.CreateSpriteFromTex(text);
+                                            this.bgSprite = Helpers.CreateSpriteFromTex(text, Vector2.zero);
                                             this.bgPersist = true;
 
                                             if (this.bgPersist && this.imageComps[0] != null)
@@ -5459,7 +5745,7 @@ namespace GameColors
                                     else if (GUILayout.Button("Apply " + Path.GetFileName(text), new GUILayoutOption[0]))
                                     {
                                         this.currBgFile = text;
-                                        this.bgSprite = this.CreateSpriteFromTex(text);
+                                        this.bgSprite = Helpers.CreateSpriteFromTex(text, Vector2.zero);
                                         this.bgPersist = true;
 
                                         if (this.bgPersist && this.imageComps[0] != null)
@@ -6792,31 +7078,21 @@ namespace GameColors
         private Rect windowRect = new Rect(Screen.width / 3f, Screen.height / 3f, 300, 400);
 
         private int menuIndex;
-
         private bool menuLoaded;
-
         private string menuTitle = "Game Colors [Main]";
 
         private Texture2D grayTex;
-
         private Texture2D buttonTex;
-
         private Texture2D buttonPressTex;
-
         private Texture2D buttonHoverTex;
 
         private Texture2D greenScreen;
-
         private Texture2D clearScreen;
 
         private float timeleft;
-
         private float accum;
-
         private int frames = 60;
-
         private bool fpsCounter;
-
         private GUIStyle fpsCount = new GUIStyle();
 
         private bool isInEditMode;
@@ -6832,13 +7108,10 @@ namespace GameColors
         private int currentThemeIndex;
 
         private Vector2 scrollPos = Vector2.zero;
-
         private Vector2 bgScrollPos = Vector2.zero;
-
         private Vector2 hwScrollPos = Vector2.zero;
 
         private string currBgFile;
-
         private string currHwFile;
 
         private Sprite bgSprite;
@@ -6846,21 +7119,17 @@ namespace GameColors
         private Texture2D hwTex;
 
         private bool bgPersist;
-
         private bool hwPersist;
 
         private bool bgSaveProfile;
-
         private bool hwSaveProfile;
 
         private Assembly asm;
 
         private GameObject[] flames = new GameObject[5];
-
         private GameObject[] lightning = new GameObject[5];
 
         private SpriteRenderer[] flameRenders = new SpriteRenderer[5];
-
         private SpriteRenderer[] lightningRenders = new SpriteRenderer[5];
 
         private Image[] imageComps = new Image[1];
@@ -6872,41 +7141,28 @@ namespace GameColors
         private SpriteRenderer[] spBars = new SpriteRenderer[7];
 
         private TweakMain.FretCover[] fretCovers = new TweakMain.FretCover[5];
-
         private TweakMain.FretHead[] fretHeads = new TweakMain.FretHead[5];
 
         private Color defaultSpColor = new Color(0, 1, 1, 1);
 
         private GUIStyle greenEx;
-
         private GUIStyle redEx;
-
         private GUIStyle yellowEx;
-
         private GUIStyle blueEx;
-
         private GUIStyle orangeEx;
 
         private GUIStyle spEx;
 
         private GUIStyle gfEx;
-
         private GUIStyle rfEx;
-
         private GUIStyle yfEx;
-
         private GUIStyle bfEx;
-
         private GUIStyle ofEx;
 
         private GUIStyle glEx;
-
         private GUIStyle rlEx;
-
         private GUIStyle ylEx;
-
         private GUIStyle blEx;
-
         private GUIStyle olEx;
 
         private GUIStyle centerText;
@@ -6922,35 +7178,23 @@ namespace GameColors
         private GUIStyle sEx;
 
         private bool redActive;
-
         private bool greenActive;
-
         private bool yellowActive;
-
         private bool blueActive;
-
         private bool orangeActive;
 
         private bool spActive;
 
         private bool gfActive;
-
         private bool rfActive;
-
         private bool yfActive;
-
         private bool bfActive;
-
         private bool ofActive;
 
         private bool glActive;
-
         private bool rlActive;
-
         private bool ylActive;
-
         private bool blActive;
-
         private bool olActive;
 
         private bool onActive;
@@ -6968,369 +7212,231 @@ namespace GameColors
         private bool spbLtRB;
 
         private bool greenRB;
-
         private bool redRB;
-
         private bool yellowRB;
-
         private bool blueRB;
-
         private bool orangeRB;
 
         private bool spRB;
 
         private bool gfRB;
-
         private bool rfRB;
-
         private bool yfRB;
-
         private bool bfRB;
-
         private bool ofRB;
-
         private bool glRB;
 
         private bool rlRB;
-
         private bool ylRB;
-
         private bool blRB;
-
         private bool olRB;
 
         private float greenR;
-
         private float greenG;
-
         private float greenB;
-
         private float greenA = 255;
 
         private float redR;
-
         private float redG;
-
         private float redB;
-
         private float redA = 255;
 
         private float yellowR;
-
         private float yellowG;
-
         private float yellowB;
-
         private float yellowA = 255;
 
         private float blueR;
-
         private float blueG;
-
         private float blueB;
-
         private float blueA = 255;
 
         private float orangeR;
-
         private float orangeG;
-
         private float orangeB;
-
         private float orangeA = 255;
 
         private float spR;
-
         private float spG;
-
         private float spB;
-
         private float spA = 255;
 
         private float gfR;
-
         private float gfG;
-
         private float gfB;
-
         private float gfA = 255;
 
         private float rfR;
-
         private float rfG;
-
         private float rfB;
-
         private float rfA = 255;
 
         private float yfR;
-
         private float yfG;
-
         private float yfB;
-
         private float yfA = 255;
 
         private float bfR;
-
         private float bfG;
-
         private float bfB;
-
         private float bfA = 255;
 
         private float ofR;
-
         private float ofG;
-
         private float ofB;
-
         private float ofA = 255;
 
         private float glR;
-
         private float glG;
-
         private float glB;
-
         private float glA = 255;
 
         private float rlR;
-
         private float rlG;
-
         private float rlB;
-
         private float rlA = 255;
 
         private float ylR;
-
         private float ylG;
-
         private float ylB;
-
         private float ylA = 255;
 
         private float blR;
-
         private float blG;
-
         private float blB;
-
         private float blA = 255;
 
         private float olR;
-
         private float olG;
-
         private float olB;
-
         private float olA = 255;
 
         private float spblR;
-
         private float spblG;
-
         private float spblB;
-
         private float spblA = 255;
 
         private float spbuR;
-
         private float spbuG;
-
         private float spbuB;
-
         private float spbuA = 255;
 
         private float spbLtR;
-
         private float spbLtG;
-
         private float spbLtB;
-
         private float spbLtA = 255;
 
         private GUIStyle gcEx;
-
         private GUIStyle rcEx;
-
         private GUIStyle ycEx;
-
         private GUIStyle bcEx;
-
         private GUIStyle ocEx;
 
         private GUIStyle ghEx;
-
         private GUIStyle rhEx;
-
         private GUIStyle yhEx;
-
         private GUIStyle bhEx;
-
         private GUIStyle ohEx;
 
         private GUIStyle ghlEx;
-
         private GUIStyle rhlEx;
-
         private GUIStyle yhlEx;
-
         private GUIStyle bhlEx;
-
         private GUIStyle ohlEx;
 
         private GUIStyle spGlowEx;
 
         private bool gcActive;
-
         private bool rcActive;
-
         private bool ycActive;
-
         private bool bcActive;
-
         private bool ocActive;
 
         private float gcR;
-
         private float gcG;
-
         private float gcB;
-
         private float gcA = 255;
 
         private float rcR;
-
         private float rcG;
-
         private float rcB;
-
         private float rcA = 255;
 
         private float ycR;
-
         private float ycG;
-
         private float ycB;
-
         private float ycA = 255;
 
         private float bcR;
-
         private float bcG;
-
         private float bcB;
-
         private float bcA = 255;
 
         private float ocR;
-
         private float ocG;
-
         private float ocB;
-
         private float ocA = 255;
 
         private bool ghActive;
-
         private bool rhActive;
-
         private bool yhActive;
-
         private bool bhActive;
-
         private bool ohActive;
 
         private float ghR;
-
         private float ghG;
-
         private float ghB;
-
         private float ghA = 255;
 
         private float rhR;
-
         private float rhG;
-
         private float rhB;
-
         private float rhA = 255;
 
         private float yhR;
-
         private float yhG;
-
         private float yhB;
-
         private float yhA = 255;
 
         private float bhR;
-
         private float bhG;
-
         private float bhB;
-
         private float bhA = 255;
 
         private float ohR;
-
         private float ohG;
-
         private float ohB;
-
         private float ohA = 255;
 
         private bool ghlActive;
-
         private bool rhlActive;
-
         private bool yhlActive;
-
         private bool bhlActive;
-
         private bool ohlActive;
 
         private float ghlR;
-
         private float ghlG;
-
         private float ghlB;
-
         private float ghlA = 255;
 
         private float rhlR;
-
         private float rhlG;
-
         private float rhlB;
-
         private float rhlA = 255;
 
         private float yhlR;
-
         private float yhlG;
-
         private float yhlB;
-
         private float yhlA = 255;
 
         private float bhlR;
-
         private float bhlG;
-
         private float bhlB;
-
         private float bhlA = 255;
 
         private float ohlR;
-
         private float ohlG;
-
         private float ohlB;
-
         private float ohlA = 255;
 
         private bool mnActive;
@@ -7366,141 +7472,90 @@ namespace GameColors
         private GUIStyle fcEx;
 
         private float mnR;
-
         private float mnG;
-
         private float mnB;
-
         private float mnA = 255;
 
         private float mcR;
-
         private float mcG;
-
         private float mcB;
-
         private float mcA = 255;
 
         private float songpbR;
-
         private float songpbG;
-
         private float songpbB;
-
         private float songpbA = 255;
 
         private float starpbR;
-
         private float starpbG;
-
         private float starpbB;
-
         private float starpbA = 255;
 
         private float osR;
-
         private float osG;
-
         private float osB;
-
         private float osA = 255;
 
         private float isR;
-
         private float isG;
-
         private float isB;
-
         private float isA = 255;
 
         private float scTextR;
-
         private float scTextG;
-
         private float scTextB;
-
         private float scTextA = 255;
 
         private float fcR;
-
         private float fcG;
-
         private float fcB;
-
         private float fcA = 255;
 
         private float onR;
-
         private float onG;
-
         private float onB;
-
         private float onA = 255;
 
         private List<ParticleSystem> particles = new List<ParticleSystem>();
 
         private float particleRR;
-
         private float particleRG;
-
         private float particleRB;
-
         private float particleRA = 255;
 
         private float particleGR;
-
         private float particleGG;
-
         private float particleGB;
-
         private float particleGA = 255;
 
         private float particleYR;
-
         private float particleYG;
-
         private float particleYB;
-
         private float particleYA = 255;
 
         private float particleBR;
-
         private float particleBG;
-
         private float particleBB;
-
         private float particleBA = 255;
 
         private float particleOR;
-
         private float particleOG;
-
         private float particleOB;
-
         private float particleOA = 255;
 
         private float particleSize;
-
         private float particleGravity;
-
         private float particleMax;
-
         private float particleSpeed;
 
         private float sR;
-
         private float sG;
-
         private float sB;
 
         private bool pgActive;
-
         private bool prActive;
-
         private bool pyActive;
-
         private bool pbActive;
-
         private bool poActive;
 
         private bool particleSettingsActive;
@@ -7510,99 +7565,63 @@ namespace GameColors
         private bool isSettingKey;
 
         private Color pgPrint;
-
         private Color prPrint;
-
         private Color pyPrint;
-
         private Color pbPrint;
-
         private Color poPrint;
 
         private GUIStyle pgEx;
-
         private GUIStyle prEx;
-
         private GUIStyle pyEx;
-
         private GUIStyle pbEx;
-
         private GUIStyle poEx;
 
         private SpriteRenderer onOval;
-
         private SpriteRenderer onOvalFlames;
 
         private SpriteRenderer[] scoreFonts = new SpriteRenderer[11];
-
         private SpriteRenderer[] comboFonts = new SpriteRenderer[6];
 
         private Color greenPrint;
-
         private Color redPrint;
-
         private Color yellowPrint;
-
         private Color bluePrint;
-
         private Color orangePrint;
 
         private Color spPrint;
 
         private Color gfPrint;
-
         private Color rfPrint;
-
         private Color yfPrint;
-
         private Color bfPrint;
-
         private Color ofPrint;
 
         private Color glPrint;
-
         private Color rlPrint;
-
         private Color ylPrint;
-
         private Color blPrint;
-
         private Color olPrint;
 
         private Color spblPrint;
-
         private Color spbuPrint;
-
         private Color spbLtPrint;
 
         private Color gcPrint;
-
         private Color rcPrint;
-
         private Color ycPrint;
-
         private Color bcPrint;
-
         private Color ocPrint;
 
         private Color ghPrint;
-
         private Color rhPrint;
-
         private Color yhPrint;
-
         private Color bhPrint;
-
         private Color ohPrint;
 
         private Color ghlPrint;
-
         private Color rhlPrint;
-
         private Color yhlPrint;
-
         private Color bhlPrint;
-
         private Color ohlPrint;
 
         private Color mnPrint;
@@ -7626,7 +7645,6 @@ namespace GameColors
         private Color spGlowPrint;
 
         private Color comboFontPrint;
-
         private Color scoreFontPrint;
 
         private Color sPrint;
@@ -7638,49 +7656,35 @@ namespace GameColors
         private SpriteRenderer cc;
 
         private SpriteRenderer pBar1;
-
         private SpriteRenderer pBar2;
 
         private SpriteRenderer outerStar;
-
         private SpriteRenderer innerStar;
-
         private SpriteRenderer starCount;
 
         private SpriteRenderer fcRotate;
-
         private SpriteRenderer fcBg;
 
         private Renderer multiRender;
-
         private Renderer multiGlowRender;
 
         private Renderer comboCountRender;
 
         private Renderer oStarRender;
-
         private Renderer iStarRender;
 
         private Renderer fcRotateRender;
-
         private Renderer fcBgRender;
 
         private SpriteRenderer star1;
-
         private SpriteRenderer star2;
-
         private SpriteRenderer star3;
-
         private SpriteRenderer star4;
-
         private SpriteRenderer star5;
-
         private SpriteRenderer star6;
-
         private SpriteRenderer star7;
 
         private SpriteRenderer glowL;
-
         private SpriteRenderer glowR;
 
         private bool spGlowActive;
@@ -7688,160 +7692,105 @@ namespace GameColors
         private bool sActive;
 
         private float strikelGR;
-
         private float strikelGG;
-
         private float strikelGB;
-
         private float strikelGA = 255;
 
         private float strikelRR;
-
         private float strikelRG;
-
         private float strikelRB;
-
         private float strikelRA = 255;
 
         private float strikelYR;
-
         private float strikelYG;
-
         private float strikelYB;
-
         private float strikelYA = 255;
 
         private float strikelBR;
-
         private float strikelBG;
-
         private float strikelBB;
-
         private float strikelBA = 255;
 
         private float strikelOR;
-
         private float strikelOG;
-
         private float strikelOB;
-
         private float strikelOA = 255;
 
         private Color strikelRPrint;
-
         private Color strikelGPrint;
-
         private Color strikelYPrint;
-
         private Color strikelBPrint;
-
         private Color strikelOPrint;
 
         private GUIStyle strikelREx;
-
         private GUIStyle strikelGEx;
-
         private GUIStyle strikelYEx;
-
         private GUIStyle strikelBEx;
-
         private GUIStyle strikelOEx;
 
         private bool strikeRActive;
-
         private bool strikeGActive;
-
         private bool strikeYActive;
-
         private bool strikeBActive;
-
         private bool strikeOActive;
 
         private float spGlowR;
-
         private float spGlowG = 1;
-
         private float spGlowB = 1;
 
         private SpriteRenderer sideLGlow;
-
         private SpriteRenderer sideRGlow;
 
         private SpriteRenderer sideL;
-
         private SpriteRenderer sideR;
 
         private SpriteRenderer highwayGlow;
 
         private float comboFontR;
-
         private float comboFontG;
-
         private float comboFontB;
 
         private float scoreFontR;
-
         private float scoreFontG;
-
         private float scoreFontB;
 
         private bool comboFontActive;
-
         private bool scoreFontActive;
 
         private GUIStyle comboFontEx;
-
         private GUIStyle scoreFontEx;
 
         private bool ghlEnabled;
 
-        private bool spRan;
-
         private string animColorsSig = "̛̜̘̔̐̑̏̓̕̚̕";
-
         private string noteColorSig = "̗̖̖̎̓̔̑̔̚̚̚";
-
         private string sustainColorSig = "̛̛̛̜̙̘̙̜̎̒̕";
-
         private string purpleColorSig = "̛̗̜̗̗̖̐̔̍̕̚";
-
         private string cyanColorSig = "̙̘̘̖̗̖̎̑̕̚̚";
-
         private string cyanAnimSig = "̛̛̗̗̙̜̏̒̐̓̚";
-
         private string openSustainSig = "̖̘̗̔̔̎̓̑̏̚̚";
 
         private Type noteType;
 
-        private FieldInfo animColorField;
-
-        private FieldInfo noteColorField;
-
-        private FieldInfo sustainColorField;
-
-        private FieldInfo cyanColorField;
-
-        private FieldInfo cyanAnimField;
-
-        private FieldInfo purpleColorField;
-
-        private FieldInfo openSustainField;
+        private static FieldInfo animColorField;
+        private static FieldInfo noteColorField;
+        private static FieldInfo sustainColorField;
+        private static FieldInfo cyanColorField;
+        private static FieldInfo cyanAnimField;
+        private static FieldInfo purpleColorField;
+        private static FieldInfo openSustainField;
 
         private bool reloaded = false;
 
+        private Timer rainbowTimer;
+        public static int[] rainbowIndex;
+        public static int rainbowGap = 100;
+        public static int rainbowSpeed = 15;
+
+
         public class FretHead
         {
-            public GameObject headLight
-            {
-                get
-                {
-                    return this.hLight;
-                }
-                set
-                {
-                    this.hLight = value;
-                }
-            }
+            public GameObject headLight { get; set; }
 
             public SpriteRenderer headLightRenderer
             {
@@ -7856,17 +7805,7 @@ namespace GameColors
                 }
             }
 
-            public GameObject head
-            {
-                get
-                {
-                    return this.h;
-                }
-                set
-                {
-                    this.h = value;
-                }
-            }
+            public GameObject head { get; set; }
 
             public SpriteRenderer headRenderer
             {
@@ -7880,10 +7819,6 @@ namespace GameColors
                 }
             }
 
-            private GameObject hLight;
-
-            private GameObject h;
-
             private SpriteRenderer hLightRender;
 
             private SpriteRenderer hRender;
@@ -7891,17 +7826,7 @@ namespace GameColors
 
         public class FretCover
         {
-            public GameObject frontCover
-            {
-                get
-                {
-                    return this.fCover;
-                }
-                set
-                {
-                    this.fCover = value;
-                }
-            }
+            public GameObject frontCover { get; set; }
 
             public SpriteRenderer frontCoverRenderer
             {
@@ -7916,17 +7841,7 @@ namespace GameColors
                 }
             }
 
-            public GameObject backCover
-            {
-                get
-                {
-                    return this.bCover;
-                }
-                set
-                {
-                    this.bCover = value;
-                }
-            }
+            public GameObject backCover { get; set; }
 
             public SpriteRenderer backCoverRenderer
             {
@@ -7941,17 +7856,7 @@ namespace GameColors
                 }
             }
 
-            public GameObject headCover
-            {
-                get
-                {
-                    return this.hCover;
-                }
-                set
-                {
-                    this.hCover = value;
-                }
-            }
+            public GameObject headCover { get; set; }
 
             public SpriteRenderer headCoverRenderer
             {
@@ -7978,12 +7883,6 @@ namespace GameColors
                     };
                 }
             }
-
-            private GameObject fCover;
-
-            private GameObject bCover;
-
-            private GameObject hCover;
 
             private SpriteRenderer fCoverRender;
 

@@ -43,6 +43,16 @@ namespace GameColors
             return val * 255f;
         }
 
+        public static Color Colour_RGB2Unity(Color col)
+        {
+            return new Color(col.r / 255f, col.g / 255f, col.b / 255f);
+        }
+
+        public static Color Colour_Unity2RGB(Color col)
+        {
+            return new Color(col.r * 255f, col.g * 255f, col.b * 255f);
+        }
+
         public static T GetComponent<T>()
         {
             foreach (GameObject gameObject in Object.FindObjectsOfType<GameObject>())
