@@ -669,6 +669,7 @@ namespace GameColors
                             this.sR = array3[0];
                             this.sG = array3[1];
                             this.sB = array3[2];
+                            try { this.sA = array3[3]; } catch (IndexOutOfRangeException) { Debug.Log("No highway side alpha channel in config. Ignoring..."); }
                             this.sActive = true;
                             break;
                     }
@@ -1816,6 +1817,8 @@ namespace GameColors
                         this.sG,
                         "|",
                         this.sB,
+                        "|",
+                        this.sA,
                     }));
                 }
                 else
@@ -2393,8 +2396,7 @@ namespace GameColors
 
                     if (!this.sActive)
                     {
-                        this.sideL.color = Color.white;
-                        this.sideR.color = Color.white;
+                        this.sideL.color = this.sideR.color = Color.white;
                     }
                 }
                 catch
@@ -3072,7 +3074,7 @@ namespace GameColors
             this.strikelBPrint = Helpers.RGBtoUnity(this.strikelBR, this.strikelBG, this.strikelBB, this.strikelBA);
             this.strikelOPrint = Helpers.RGBtoUnity(this.strikelOR, this.strikelOG, this.strikelOB, this.strikelOA);
 
-            this.sPrint = Helpers.RGBtoUnity(this.sR, this.sG, this.sB, 255);
+            this.sPrint = Helpers.RGBtoUnity(this.sR, this.sG, this.sB, this.sA);
 
             if (this.isInEditMode)
             {
@@ -6940,6 +6942,9 @@ namespace GameColors
                             GUILayout.Label("Blue Value [" + this.sB + "]", new GUILayoutOption[0]);
                             this.sB = GUILayout.HorizontalSlider(this.sB, 0, 255, new GUILayoutOption[0]);
 
+                            GUILayout.Label("Alpha Value [" + this.sA + "]", new GUILayoutOption[0]);
+                            this.sA = GUILayout.HorizontalSlider(this.sA, 0, 255, new GUILayoutOption[0]);
+
                             GUILayout.Label("Current Color Selection", this.sEx, new GUILayoutOption[0]);
                             this.sActive = GUILayout.Toggle(this.sActive, "Color Enabled", new GUILayoutOption[0]);
 
@@ -7551,6 +7556,7 @@ namespace GameColors
         private float sR;
         private float sG;
         private float sB;
+        private float sA;
 
         private bool pgActive;
         private bool prActive;
