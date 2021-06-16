@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepInEx;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -76,7 +77,7 @@ namespace GameColors
 
         public static bool keyBindAlreadyUsed = false;
 
-        private static string configLoc = Environment.CurrentDirectory + "/Tweaks/Config/Keybinds.cfg";
+        private static string configLoc = Path.Combine(Paths.ConfigPath, TweakMain.ModName, "Keybinds.cfg");
 
         private static List<string> keyBinds = new List<string>();
 

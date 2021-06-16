@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepInEx;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -16,8 +17,11 @@ using Timer = System.Timers.Timer;
 
 namespace GameColors
 {
-    public class TweakMain : MonoBehaviour
+    [BepInPlugin("com.jacon500.gamecolors", "Game Colors", "1.0.0")]
+    public class TweakMain : BaseUnityPlugin
     {
+
+        public const string ModName = "gamecolors";
 
         private bool isStarPower
         {
@@ -153,7 +157,7 @@ namespace GameColors
         {
             try
             {
-                string[] array = File.ReadAllLines(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/" + pName);
+                string[] array = File.ReadAllLines(Path.Combine(Paths.ConfigPath, ModName, "GC Profiles", pName));
                 if (array[34] != "empty")
                 {
                     this.bgSprite = Helpers.CreateSpriteFromTex(array[34], Vector2.zero);
@@ -179,7 +183,7 @@ namespace GameColors
         private void LoadConfig(string pName)
         {
             Debug.Log("Loading profile: " + pName);
-            string[] array = File.ReadAllLines(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/" + pName);
+            string[] array = File.ReadAllLines(Path.Combine(Paths.ConfigPath, ModName, "GC Profiles", pName));
             
             this.LoadDefaultValues();
             this.LoadBG(pName);
@@ -682,7 +686,7 @@ namespace GameColors
         private void SaveConfig(string fileName)
         {
             Debug.Log("Saving config: " + fileName);
-            using (StreamWriter streamWriter = new StreamWriter(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/" + fileName + ".cfg"))
+            using (StreamWriter streamWriter = new StreamWriter(Path.Combine(Paths.ConfigPath, ModName, "GC Profiles", fileName + ".cfg")))
             {
                 if (!this.greenRB && this.greenActive)
                 {
@@ -1827,7 +1831,7 @@ namespace GameColors
                 }
             }
 
-            using (StreamWriter streamWriter2 = new StreamWriter(Environment.CurrentDirectory + "/Tweaks/Config/GC-Default.txt"))
+            using (StreamWriter streamWriter2 = new StreamWriter(Path.Combine(Paths.ConfigPath, ModName, "GC-Default.txt")))
             {
                 if (this.saveAsDefault)
                 {
@@ -1850,8 +1854,8 @@ namespace GameColors
             this.rainbowTimer = new Timer(20.0);
 
             UnityEngine.Object.DontDestroyOnLoad(this);
-            new DirectoryInfo(Environment.CurrentDirectory + "/Tweaks/Config/").Create();
-            new DirectoryInfo(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/").Create();
+            new DirectoryInfo(Path.Combine(Paths.ConfigPath, ModName)).Create();
+            new DirectoryInfo(Path.Combine(Paths.ConfigPath, ModName, "GC Profiles")).Create();
             SceneManager.activeSceneChanged += new UnityAction<Scene, Scene>(this.GatherObjs);
 
             this.greenEx = new GUIStyle();
@@ -1921,9 +1925,9 @@ namespace GameColors
 
             this.asm = Assembly.Load("Assembly-CSharp");
 
-            if (File.Exists(Environment.CurrentDirectory + "/Tweaks/Config/GC-Default.txt"))
+            if (File.Exists(Path.Combine(Paths.ConfigPath, ModName, "GC-Default.txt")))
             {
-                string[] array = File.ReadAllLines(Environment.CurrentDirectory + "/Tweaks/Config/GC-Default.txt");
+                string[] array = File.ReadAllLines(Path.Combine(Paths.ConfigPath, ModName, "GC-Default.txt"));
                 if (array[0] != "empty" && array[0] != string.Empty)
                 {
                     this.profileName = array[0];
@@ -5684,7 +5688,7 @@ namespace GameColors
                             GUILayout.Label("All Profiles", new GUILayoutOption[0]);
                             this.scrollPos = GUILayout.BeginScrollView(this.scrollPos, new GUILayoutOption[0]);
 
-                            foreach (string path in Directory.GetFiles(Environment.CurrentDirectory + "/Tweaks/Config/GC Profiles/"))
+                            foreach (string path in Directory.GetFiles(Path.Combine(Paths.ConfigPath, ModName, "GC Profiles")))
                             {
                                 if (GUILayout.Button("Load " + Path.GetFileName(path), new GUILayoutOption[0]))
                                 {
@@ -7078,7 +7082,7 @@ namespace GameColors
             GUI.skin.textField.fixedWidth = this.windowRect.width;
         }
 
-        private readonly string configLoc = Environment.CurrentDirectory + "/Tweaks/Config/cfg-GameColors.txt";
+        private readonly string configLoc = Path.Combine(Paths.ConfigPath, ModName, "cfg-GameColors.txt");
 
         private Rect windowRect = new Rect(Screen.width / 3f, Screen.height / 3f, 300, 400);
 
